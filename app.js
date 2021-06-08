@@ -1,21 +1,39 @@
-var createError = require("http-errors");
-var express = require("express");
-var path = require("path");
-var cookieParser = require("cookie-parser");
-var logger = require("morgan");
+require("dotenv").config();
+const createError = require("http-errors");
+const express = require("express");
+const path = require("path");
+const cookieParser = require("cookie-parser");
+const logger = require("morgan");
+const database = require("./database/dbMiddleware");
+const swaggerUI = require("swagger-ui-express");
+const cors = require("cors");
+const helmet = require("helmet");
+const swaggerDocument = require("./docs/swagger.json");
 
-var indexRouter = require("./routes/index");
-var usersRouter = require("./routes/users");
+const indexRouter = require("./routes/index");
+const usersRouter = require("./routes/user");
 
-var app = express();
+const app = express();
 
-app.use(logger("dev"));
+app.use(logger("common"));
+app.use(helmet());
+app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
+app.use(database);
 
 app.use("/", indexRouter);
 app.use("/users", usersRouter);
+app.use("/docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
+
+app.get("/knex", async function (req, res, next) {
+  const result = await req.db
+    .raw("SELECT VERSION()")
+    .then((version) => JSON.stringify(version[0][0]));
+
+  res.send("Version Logged successfully" + result);
+});
 
 // catch 404 and forward to error handler
 app.use(function (req, res, next) {
@@ -30,7 +48,7 @@ app.use(function (err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render("error");
+  res.status(500).json({ error: "Server Error!" });
 });
 
 module.exports = app;
