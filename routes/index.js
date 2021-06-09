@@ -1,15 +1,16 @@
 const express = require("express");
+const authorize = require("./middleware/authorize");
 const router = express.Router();
 const validQueryParameters = require("./middleware/validQueryParameters");
 
 const validateYear = (year) => {
-  if (!/[0-9]{4}/.test(year)) {
+  if (!/^[0-9]{4}$/.test(year)) {
     throw new Error("Invalid year format. Format must be yyyy");
   } else {
     return true;
   }
 };
-
+const validateCountry = (country) => /^[a-zA-Z\s\(\)]+$/.test(country);
 /**
  * Does not include 0
  * @param {string} str
@@ -53,8 +54,7 @@ router.get(
     }
     //InvalidCountryFormat - I have asked tutor Michael,
     // this really means only accept letters, space and ( )
-    if (country && !/^[a-zA-Z\s\(\)]+$/.test(country)) {
-      console.log("invalid country");
+    if (country && !validateCountry(country)) {
       res.status(400).json({
         error: true,
         message:
@@ -102,6 +102,7 @@ router.get("/countries", validQueryParameters([]), (req, res) => {
  */
 router.get(
   "/factors/:year",
+  authorize,
   validQueryParameters(["limit", "country"]),
   async (req, res) => {
     const year = req.params.year;
@@ -119,13 +120,27 @@ router.get(
         });
         return;
       }
+    } else {
+      res.status(400).json({
+        error: true,
+        message: "Year is required",
+      });
+      return;
     }
     // optional limit, country
     // validate limit
-    if (!isNormalInteger(limit)) {
+    if (limit && !isNormalInteger(limit)) {
       res.status(400).json({
         error: true,
         message: "Invalid limit query. Limit must be a positive number.",
+      });
+      return;
+    }
+    if (country && !validateCountry(country)) {
+      res.status(400).json({
+        error: true,
+        message:
+          "Invalid country format. Country query parameter cannot contain numbers.",
       });
       return;
     }
@@ -147,11 +162,27 @@ router.get(
       .where(purify({ year, country }))
       .limit(limit);
 
-    res.status(200).json(rows);
+    res.status(200).json(
+      rows.map((row) => {
+        console.log(row.score);
+        console.log(typeof row.score);
+        return {
+          rank: row.rank,
+          country: row.country,
+          score: row.score.toFixed(3),
+          economy: row.economy.toFixed(3),
+          family: row.family.toFixed(3),
+          health: row.health.toFixed(3),
+          freedom: row.freedom.toFixed(3),
+          generosity: row.generosity.toFixed(3),
+          trust: row.trust.toFixed(3),
+        };
+      })
+    );
   }
 );
 
-router.get("/factors", (req, res) => {
+router.get("/factors", authorize, (req, res) => {
   res.status(404).json({
     status: "error",
     message: "Page not found!",
