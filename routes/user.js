@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+
 const requiredBody = require("./middleware/requiredBody");
 
 function validateEmail(email) {
@@ -8,6 +10,7 @@ function validateEmail(email) {
     /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
   return re.test(String(email).toLowerCase());
 }
+
 router.post(
   "/register",
   requiredBody(["email", "password"]),
@@ -43,5 +46,45 @@ router.post(
     }
   }
 );
+
+router.post("/login", requiredBody(["email", "password"]), async (req, res) => {
+  // 1. Retrieve email and password from req.body
+  const { email, password } = req.body;
+  // 2. Determine if user already exists in table
+  const queryUser = (await req.db.from("user").select("*").where({ email }))[0];
+  // 2.1 If user does exist, verify if passwords match
+  if (queryUser) {
+    const match = await bcrypt.compare(password, queryUser.hash);
+    // 2.1.1 If passwords match, return JWT token
+    if (match) {
+      // Create and return JWT token
+      const secretKey = process.env.SECRET_KEY;
+      const expires_in = 60 * 60 * 24; // 1 Day
+      const exp = Date.now() + expires_in * 1000;
+      const token = jwt.sign({ email, exp }, secretKey);
+      res.status(200).json({
+        token,
+        token_type: "Bearer",
+        expires_in,
+      });
+    }
+    // 2.1.2 If passwords do no match, return error response
+    else {
+      res.status(401).json({
+        error: true,
+        message: "Incorrect email or password",
+      });
+    }
+  }
+  // 2.2 If user does not exist, return error response
+  else {
+    // I know user does not exist
+    // Try to prevent from being hacked
+    res.status(401).json({
+      error: true,
+      message: "Incorrect email or password",
+    });
+  }
+});
 
 module.exports = router;

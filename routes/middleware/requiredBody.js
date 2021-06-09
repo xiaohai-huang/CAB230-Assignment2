@@ -1,5 +1,4 @@
 module.exports = (requiredFields) => (req, res, next) => {
-  console.log("in middle ware");
   const sortedRequiredFields = requiredFields.sort();
   const sortedRealBody = Object.keys(req.body).sort();
   for (let i = 0; i < sortedRequiredFields.length; i++) {
