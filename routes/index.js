@@ -1,7 +1,8 @@
 const express = require("express");
-const authorize = require("./middleware/authorize");
 const router = express.Router();
-const validQueryParameters = require("./middleware/validQueryParameters");
+
+const authorize = require("./middleware/authorize");
+const validateQueryParameters = require("./middleware/validateQueryParameters");
 
 const validateYear = (year) => {
   if (!/^[0-9]{4}$/.test(year)) {
@@ -36,7 +37,7 @@ const purify = (json) => JSON.parse(JSON.stringify(json));
  */
 router.get(
   "/rankings",
-  validQueryParameters(["year", "country"]),
+  validateQueryParameters(["year", "country"]),
   (req, res) => {
     const { year, country } = req.query;
 
@@ -81,7 +82,7 @@ router.get(
 /**
  * Returns a list of all surveyed countries, ordered alphabetically.
  */
-router.get("/countries", validQueryParameters([]), (req, res) => {
+router.get("/countries", validateQueryParameters([]), (req, res) => {
   req.db
     .from("rankings")
     .distinct()
@@ -102,8 +103,8 @@ router.get("/countries", validQueryParameters([]), (req, res) => {
  */
 router.get(
   "/factors/:year",
-  authorize,
-  validQueryParameters(["limit", "country"]),
+  authorize(true),
+  validateQueryParameters(["limit", "country"]),
   async (req, res) => {
     const year = req.params.year;
     const { limit, country } = req.query;
@@ -164,8 +165,6 @@ router.get(
 
     res.status(200).json(
       rows.map((row) => {
-        console.log(row.score);
-        console.log(typeof row.score);
         return {
           rank: row.rank,
           country: row.country,

@@ -1,7 +1,11 @@
 const jwt = require("jsonwebtoken");
-module.exports = (req, res, next) => {
+module.exports = (strict) => (req, res, next) => {
   const { authorization } = req.headers;
-  let token = null;
+  if (!strict && !authorization) {
+    req.authenticated = false;
+    next();
+    return;
+  }
   // Retrieve token
   if (authorization) {
     // Authorization header is malformed
@@ -16,21 +20,22 @@ module.exports = (req, res, next) => {
     if (token_type === "Bearer") {
       // Verify JWT and check expiration date
       try {
-        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+        const { exp, email } = jwt.verify(token, process.env.SECRET_KEY);
 
         // TokenExpired
-        if (decoded.exp < Date.now()) {
+        if (exp < Date.now()) {
           res.status(401).json({
             error: true,
             message: "JWT token has expired",
           });
           return;
         } else {
+          req.authenticated = true;
+          req.email = email;
           next();
           return;
         }
       } catch (e) {
-        console.log(e);
         // InvalidJWT
         res.status(401).json({
           error: true,

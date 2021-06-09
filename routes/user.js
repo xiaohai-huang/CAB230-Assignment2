@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
 const requiredBody = require("./middleware/requiredBody");
+const authorize = require("./middleware/authorize");
 
 function validateEmail(email) {
   const re =
@@ -23,6 +24,15 @@ router.post(
         error: true,
         message: "Email is in a incorrect format.",
       });
+      return;
+    }
+    // password shouldn't be empty
+    if (!password) {
+      res.status(400).json({
+        error: true,
+        message: "Password shouldn't be empty.",
+      });
+      return;
     }
     // 2. Determine if user already exists in table
     const queryUsers = await req.db.from("user").select("*").where({ email });
@@ -50,6 +60,13 @@ router.post(
 router.post("/login", requiredBody(["email", "password"]), async (req, res) => {
   // 1. Retrieve email and password from req.body
   const { email, password } = req.body;
+  if (!password) {
+    res.status(400).json({
+      error: true,
+      message: "Password shouldn't be empty.",
+    });
+    return;
+  }
   // 2. Determine if user already exists in table
   const queryUser = (await req.db.from("user").select("*").where({ email }))[0];
   // 2.1 If user does exist, verify if passwords match
@@ -86,5 +103,79 @@ router.post("/login", requiredBody(["email", "password"]), async (req, res) => {
     });
   }
 });
+
+// profile
+router.get("/:email/profile", authorize(false), async (req, res) => {
+  const { email } = req.params;
+  if (!email || !validateEmail(email)) {
+    res.status(400).json({
+      error: true,
+      message: "Email is required",
+    });
+    return;
+  }
+  const profile = (await req.db.from("user").select("*").where({ email }))[0];
+  if (!profile) {
+    res.status(404).json({
+      error: true,
+      message: "User not found",
+    });
+    return;
+  }
+  // AuthenticatedProfile && user itself?
+  if (req.authenticated && email === req.email) {
+    res.status(200).json({
+      email: profile.email ? profile.email : null,
+      firstName: profile.firstName ? profile.firstName : null,
+      lastName: profile.lastName ? profile.lastName : null,
+      dob: profile.dob ? profile.dob : null,
+      address: profile.address ? profile.address : null,
+    });
+    return;
+  }
+  // PublicProfile
+  else {
+    res.status(200).json({
+      email: profile.email ? profile.email : null,
+      firstName: profile.firstName ? profile.firstName : null,
+      lastName: profile.lastName ? profile.lastName : null,
+    });
+    return;
+  }
+});
+
+router.put(
+  "/:email/profile",
+  authorize(true),
+  requiredBody(["firstName", "lastName", "dob", "address"]),
+  async (req, res) => {
+    const { email } = req.params;
+    const { firstName, lastName, dob, address } = req.body;
+    console.log({ firstName, lastName, dob, address });
+    // Forbidden. Email address associated with JWT token is not the same as email provided in path parameter.
+    if (req.email !== email) {
+      res.status(403).json({
+        error: true,
+        message: "Forbidden",
+      });
+      return;
+    }
+    // InvalidFirstNameLastNameAddressFormat
+
+    // InvalidProfileDateFormat
+
+    // InvalidProfileDate
+
+    // Perform the update
+    await req.db
+      .from("user")
+      .where({ email })
+      .update({ firstName, lastName, dob, address });
+    const updatedUser = (
+      await req.db.from("user").select("*").where({ email })
+    )[0];
+    res.status(200).json(updatedUser);
+  }
+);
 
 module.exports = router;
