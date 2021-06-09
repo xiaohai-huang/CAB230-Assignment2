@@ -1,5 +1,6 @@
-var express = require("express");
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
+const validQueryParameters = require("./middleware/validQueryParameters");
 
 const validateYear = (year) => {
   if (!/[0-9]{4}/.test(year)) {
@@ -8,86 +9,79 @@ const validateYear = (year) => {
     return true;
   }
 };
+
 /**
  * Does not include 0
  * @param {string} str
- * @returns
+ * @returns true if the input string is a positive integer
  */
-function isNormalInteger(str) {
+const isNormalInteger = (str) => {
   var n = Math.floor(Number(str));
   return parseInt(str, 10) === Number(str) && n > 0;
-}
+};
 
+/**
+ * Removed undefined in the JSON
+ * @param {object} json
+ * @returns
+ */
 const purify = (json) => JSON.parse(JSON.stringify(json));
+
 /**
  *  Returns a list of countries and their happiness rank
  *  for the years 2015 to 2020. The list is arranged by year,
  *  in descending order. The list can optionally be filtered
  *  by year and/or country name using query parameters.
  */
-router.get("/rankings", (req, res) => {
-  const { year, country } = req.query;
+router.get(
+  "/rankings",
+  validQueryParameters(["year", "country"]),
+  (req, res) => {
+    const { year, country } = req.query;
 
-  // only accepts year and country
-  const VALID_QUERY_PARAMS = ["year", "country"];
-  // InvalidParametersRankings
-  for (const param in req.query) {
-    if (!VALID_QUERY_PARAMS.includes(param)) {
+    // InValidYearFormat
+    if (year) {
+      try {
+        validateYear(year);
+      } catch (err) {
+        res.status(400).json({
+          error: true,
+          message: err.message,
+        });
+        return;
+      }
+    }
+    //InvalidCountryFormat - I have asked tutor Michael,
+    // this really means only accept letters, space and ( )
+    if (country && !/^[a-zA-Z\s\(\)]+$/.test(country)) {
+      console.log("invalid country");
       res.status(400).json({
         error: true,
         message:
-          "Invalid query parameters. Only year and country are permitted.",
+          "Invalid country format. Country query parameter cannot contain numbers.",
       });
       return;
     }
-  }
 
-  // InValidYearFormat
-  if (year) {
-    try {
-      validateYear(year);
-    } catch (err) {
-      res.status(400).json({
-        error: true,
-        message: err.message,
+    // query the db
+    req
+      .db("rankings")
+      .select("rank", "country", "score", "year")
+      .where(purify({ year, country }))
+      .orderBy("year", "desc")
+      .orderBy("rank", "asc")
+      .then((rows) => {
+        res
+          .status(200)
+          .json(rows.map((row) => ({ ...row, score: row.score.toString() })));
       });
-      return;
-    }
   }
-  //InvalidCountryFormat - I have asked tutor Michael,
-  // this really means only accept letters, space and ( )
-  if (country && !/^[a-zA-Z\s\(\)]+$/.test(country)) {
-    console.log("invalid country");
-    res.status(400).json({
-      error: true,
-      message:
-        "Invalid country format. Country query parameter cannot contain numbers.",
-    });
-    return;
-  }
-
-  // query the db
-  req
-    .db("rankings")
-    .select("rank", "country", "score", "year")
-    .where(purify({ year, country }))
-    .then((rows) => {
-      res.status(200).json(rows);
-    });
-});
+);
 
 /**
  * Returns a list of all surveyed countries, ordered alphabetically.
  */
-router.get("/countries", (req, res) => {
-  // No Query Parameters
-  if (Object.keys(req.query).length !== 0) {
-    res.status(400).json({
-      error: true,
-      message: "Invalid query parameters. Query parameters are not permitted.",
-    });
-    return;
-  }
+router.get("/countries", validQueryParameters([]), (req, res) => {
   req.db
     .from("rankings")
     .distinct()
@@ -106,52 +100,56 @@ router.get("/countries", (req, res) => {
  * This route also requires the user to be authenticated - a valid JWT token must be
  * sent in the header of the request.
  */
-router.get("/factors/:year", async (req, res) => {
-  const year = req.params.year;
-  const { limit, country } = req.query;
-  // TODO: token validation
+router.get(
+  "/factors/:year",
+  validQueryParameters(["limit", "country"]),
+  async (req, res) => {
+    const year = req.params.year;
+    const { limit, country } = req.query;
+    // TODO: token validation
 
-  // InvalidYearFormat
-  if (year) {
-    try {
-      validateYear(year);
-    } catch (err) {
+    // InvalidYearFormat
+    if (year) {
+      try {
+        validateYear(year);
+      } catch (err) {
+        res.status(400).json({
+          error: true,
+          message: err.message,
+        });
+        return;
+      }
+    }
+    // optional limit, country
+    // validate limit
+    if (!isNormalInteger(limit)) {
       res.status(400).json({
         error: true,
-        message: err.message,
+        message: "Invalid limit query. Limit must be a positive number.",
       });
       return;
     }
-  }
-  // optional limit, country
-  // validate limit
-  if (!isNormalInteger(limit)) {
-    res.status(400).json({
-      error: true,
-      message: "Invalid limit query. Limit must be a positive number.",
-    });
-    return;
-  }
-  const COLUMNS = [
-    "rank",
-    "country",
-    "score",
-    "economy",
-    "family",
-    "health",
-    "freedom",
-    "generosity",
-    "trust",
-  ];
+    const COLUMNS = [
+      "rank",
+      "country",
+      "score",
+      "economy",
+      "family",
+      "health",
+      "freedom",
+      "generosity",
+      "trust",
+    ];
 
-  const rows = await req.db
-    .from("rankings")
-    .select(...COLUMNS)
-    .where(purify({ year, country }))
-    .limit(limit);
+    const rows = await req.db
+      .from("rankings")
+      .select(...COLUMNS)
+      .where(purify({ year, country }))
+      .limit(limit);
 
-  res.status(200).json(rows);
-});
+    res.status(200).json(rows);
+  }
+);
 
 router.get("/factors", (req, res) => {
   res.status(404).json({

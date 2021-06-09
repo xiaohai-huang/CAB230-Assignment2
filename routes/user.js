@@ -1,9 +1,15 @@
-var express = require('express');
-var router = express.Router();
+const express = require("express");
+const router = express.Router();
 
-/* GET users listing. */
-router.get('/', function(req, res, next) {
-  res.send('respond with a resource');
-});
+const requiredBody = require("./middleware/requiredBody");
+
+router.post(
+  "/register",
+  requiredBody(["email", "password"]),
+  function (req, res) {
+    console.log("in register");
+    res.send("respond with a resource");
+  }
+);
 
 module.exports = router;

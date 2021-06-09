@@ -24,7 +24,7 @@ app.use(cookieParser());
 app.use(database);
 
 app.use("/", indexRouter);
-app.use("/users", usersRouter);
+app.use("/user", usersRouter);
 app.use("/docs", swaggerUI.serve, swaggerUI.setup(swaggerDocument));
 
 app.get("/knex", async function (req, res, next) {
@@ -48,7 +48,7 @@ app.use(function (err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.status(500).json({ error: "Server Error!" });
+  res.status(500).json({ error: "Server Error!" + JSON.stringify(err) });
 });
 
 module.exports = app;
