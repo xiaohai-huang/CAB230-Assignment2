@@ -1,0 +1,6 @@
+CREATE TABLE user (
+    `id` INT UNIQUE NOT NULL AUTO_INCREMENT,
+    `email`  VARCHAR(255) UNIQUE NOT NULL,
+    `hash` VARCHAR(255) NOT NULL,
+    PRIMARY KEY (`id`)
+);
