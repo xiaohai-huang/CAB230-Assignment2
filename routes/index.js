@@ -166,15 +166,15 @@ router.get(
     res.status(200).json(
       rows.map((row) => {
         return {
-          rank: row.rank,
+          rank: Number(row.rank),
           country: row.country,
-          score: row.score.toFixed(3),
-          economy: row.economy.toFixed(3),
-          family: row.family.toFixed(3),
-          health: row.health.toFixed(3),
-          freedom: row.freedom.toFixed(3),
-          generosity: row.generosity.toFixed(3),
-          trust: row.trust.toFixed(3),
+          score: Number(row.score).toFixed(3),
+          economy: Number(row.economy).toFixed(3),
+          family: Number(row.family).toFixed(3),
+          health: Number(row.health).toFixed(3),
+          freedom: Number(row.freedom).toFixed(3),
+          generosity: Number(row.generosity).toFixed(3),
+          trust: Number(row.trust).toFixed(3),
         };
       })
     );
