@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 
 const requiredBody = require("./middleware/requiredBody");
 const authorize = require("./middleware/authorize");
+const moment = require("moment");
 
 function validateEmail(email) {
   const re =
@@ -13,7 +14,7 @@ function validateEmail(email) {
 }
 
 function validateStringOnly(str) {
-  return /^[a-zA-z\s]+$/.test(str);
+  return typeof str === "string";
 }
 
 router.post(
@@ -174,8 +175,22 @@ router.put(
       return;
     }
     // InvalidProfileDateFormat
-
-    // InvalidProfileDate
+    const date = moment(dob, "YYYY-MM-DD", true);
+    if (!date.isValid()) {
+      res.status(400).json({
+        error: true,
+        message: "Invalid input: dob must be a real date in format YYYY-MM-DD.",
+      });
+      return;
+    }
+    // InvalidProfileDate - date in the past
+    if (date.isAfter()) {
+      res.status(400).json({
+        error: true,
+        message: "Invalid input: dob must be a date in the past.",
+      });
+      return;
+    }
 
     // Perform the update
     await req.db
@@ -185,7 +200,13 @@ router.put(
     const updatedUser = (
       await req.db.from("user").select("*").where({ email })
     )[0];
-    res.status(200).json(updatedUser);
+    res.status(200).json({
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      dob: updatedUser.dob,
+      address: updatedUser.address,
+    });
   }
 );
 
