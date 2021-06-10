@@ -3,24 +3,11 @@ const router = express.Router();
 
 const authorize = require("../middleware/authorize");
 const validateQueryParameters = require("../middleware/validateQueryParameters");
-
-const validateYear = (year) => {
-  if (!/^[0-9]{4}$/.test(year)) {
-    throw new Error("Invalid year format. Format must be yyyy");
-  } else {
-    return true;
-  }
-};
-const validateCountry = (country) => /^[a-zA-Z\s\(\)]+$/.test(country);
-/**
- * Does not include 0
- * @param {string} str
- * @returns true if the input string is a positive integer
- */
-const isNormalInteger = (str) => {
-  var n = Math.floor(Number(str));
-  return parseInt(str, 10) === Number(str) && n > 0;
-};
+const {
+  validateYear,
+  validateCountry,
+  isNormalInteger,
+} = require("../utility/validator");
 
 /**
  * Removed undefined in the JSON

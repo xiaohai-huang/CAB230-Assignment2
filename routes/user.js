@@ -2,20 +2,11 @@ const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
+const moment = require("moment");
 
 const requiredBody = require("../middleware/requiredBody");
 const authorize = require("../middleware/authorize");
-const moment = require("moment");
-
-function validateEmail(email) {
-  const re =
-    /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-  return re.test(String(email).toLowerCase());
-}
-
-function validateStringOnly(str) {
-  return typeof str === "string";
-}
+const { validateEmail, validateStringOnly } = require("../utility/validator");
 
 router.post(
   "/register",
