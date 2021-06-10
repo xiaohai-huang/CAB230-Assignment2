@@ -3,8 +3,8 @@ const router = express.Router();
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 
-const requiredBody = require("./middleware/requiredBody");
-const authorize = require("./middleware/authorize");
+const requiredBody = require("../middleware/requiredBody");
+const authorize = require("../middleware/authorize");
 const moment = require("moment");
 
 function validateEmail(email) {
