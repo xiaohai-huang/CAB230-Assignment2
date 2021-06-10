@@ -1,8 +1,8 @@
 const express = require("express");
 const router = express.Router();
 
-const authorize = require("./middleware/authorize");
-const validateQueryParameters = require("./middleware/validateQueryParameters");
+const authorize = require("../middleware/authorize");
+const validateQueryParameters = require("../middleware/validateQueryParameters");
 
 const validateYear = (year) => {
   if (!/^[0-9]{4}$/.test(year)) {
