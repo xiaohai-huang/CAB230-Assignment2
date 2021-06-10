@@ -12,6 +12,10 @@ function validateEmail(email) {
   return re.test(String(email).toLowerCase());
 }
 
+function validateStringOnly(str) {
+  return /^[a-zA-z\s]+$/.test(str);
+}
+
 router.post(
   "/register",
   requiredBody(["email", "password"]),
@@ -151,7 +155,6 @@ router.put(
   async (req, res) => {
     const { email } = req.params;
     const { firstName, lastName, dob, address } = req.body;
-    console.log({ firstName, lastName, dob, address });
     // Forbidden. Email address associated with JWT token is not the same as email provided in path parameter.
     if (req.email !== email) {
       res.status(403).json({
@@ -160,8 +163,16 @@ router.put(
       });
       return;
     }
-    // InvalidFirstNameLastNameAddressFormat
-
+    // InvalidFirstNameLastNameAddressFormat - string only
+    const infos = [firstName, lastName, address];
+    if (infos.some((info) => !validateStringOnly(info))) {
+      res.status(400).json({
+        error: true,
+        message:
+          "Request body invalid, firstName, lastName and address must be strings only.",
+      });
+      return;
+    }
     // InvalidProfileDateFormat
 
     // InvalidProfileDate
