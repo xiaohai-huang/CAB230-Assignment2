@@ -1,3 +1,4 @@
+USE happiness;
 CREATE TABLE user (
     `id` INT UNIQUE NOT NULL AUTO_INCREMENT,
     `email`  VARCHAR(255) UNIQUE NOT NULL,
