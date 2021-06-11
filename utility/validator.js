@@ -1,3 +1,8 @@
+/**
+ * Test if a string is a year and in yyyy format
+ * @param {string} year
+ * @returns boolean
+ */
 const validateYear = (year) => {
   if (!/^[0-9]{4}$/.test(year)) {
     throw new Error("Invalid year format. Format must be yyyy");
